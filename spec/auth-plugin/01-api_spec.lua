@@ -12,17 +12,22 @@ for _, strategy in helpers.all_strategies() do
 
       local bp = helpers.get_db_utils(strategy == "off" and "postgres" or strategy, nil, { PLUGIN_NAME })
 
-      -- Inject a test route. No need to create a service, there is a default
-      -- service which will echo the request.
-      local route1 = bp.routes:insert({
-        hosts = { "localhost:8001" },
-        -- paths = { "/httpbin/routes" },
-        service = bp.services:insert { name = "httpbin", url = "http://httpbin.org/anything" }
-      })
+      local service = bp.services:insert {
+        name = "httpbin",
+        url = "http://httpbin.org/anything",
+        host = "localhost",
+        port = 8001
+      }
+
+      bp.routes:insert {
+        paths = { '/' },
+        methods = { "GET" },
+        service = service
+      }
       -- add the plugin to test to the route we created
       bp.plugins:insert {
         name = PLUGIN_NAME,
-        route = { id = route1.id },
+        -- route = { id = route.id },
         config = {
           introspection_endpoint = "http://192.168.1.118:8080/auth/validate/token",
           authorization_endpoint = "http://192.168.1.118:8080/auth/validate/customer"
@@ -55,49 +60,51 @@ for _, strategy in helpers.all_strategies() do
     end)
 
     describe("success request", function()
-      it("success request with valid customer ID and valid authorization header", function()
+      it("Valid customer ID and Valid authorization header", function()
 
         local res = assert(client:send {
-          method  = "GET",
-          path    = "/httpbin/xudegui",
+          method = "GET",
+          path = "/httpbin/xudegui",
           headers = {
             ["Authorization"] = "Bearer XXXXX",
           }
         })
-        local body = assert.res_status(200, res)
-        local json = cjson.decode(body)
 
-        kong.log.debug(json)
+        assert.response(res).has.status(200)
+        -- local body = assert.res_status(200, res)
+        -- local json = cjson.decode(body)
+
+        -- kong.log.debug(json)
       end)
     end)
 
-    -- describe("wrong authorization header", function()
-    --   it("error request with valid customer ID and in-valid authorization header", function()
-    --     local res = assert(client:send {
-    --       method = "GET",
-    --       path = "http://localhost:8000/httpbin/xudegui",
-    --       headers = {
-    --         ["Authorization"] = "Bearer YYYYY"
-    --       }
-    --     })
+    describe("wrong authorization header", function()
+      it("Valid customer ID and in-valid authorization header", function()
+        local res = assert(client:send {
+          method = "GET",
+          path = "/httpbin/xudegui",
+          headers = {
+            ["Authorization"] = "Bearer YYYYY"
+          }
+        })
 
-    --     assert.response(res).has.status(200)
-    --   end)
-    -- end)
+        assert.response(res).has.status(401)
+      end)
+    end)
 
-    -- describe("wrong authorization user", function()
-    --   it("error request with in-valid customer ID and valid authorization header", function()
-    --     local res = assert(client:send {
-    --       method = "GET",
-    --       path = "http://localhost:8000/httpbin/taka",
-    --       headers = {
-    --         ["Authorization"] = "Bearer XXXXX"
-    --       }
-    --     })
+    describe("wrong authorization user", function()
+      it("In-valid customer ID and valid authorization header", function()
+        local res = assert(client:send {
+          method = "GET",
+          path = "/httpbin/taka",
+          headers = {
+            ["Authorization"] = "Bearer XXXXX"
+          }
+        })
 
-    --     assert.response(res).has.status(200)
-    --   end)
-    -- end)
+        assert.response(res).has.status(401)
+      end)
+    end)
 
   end)
 end
