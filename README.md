@@ -24,8 +24,7 @@ pongo run
   - schema.lua
   - access.lua
 - spec / auth-plugin
-  - unit-test.lua
-  - intgration-test.lua
+  - 01-api_spec.lua
 - kong-plugin-auth-plugin-0.1.0-1.rockspec
 - README.md
 
